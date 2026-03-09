@@ -1,6 +1,6 @@
-# Simple Time MCP Server
+# Simple Time MCP Demo
 
-一个极简的 MCP Server demo，用于返回当前 UTC 时间。
+极简 MCP Server，返回当前 UTC 时间。
 
 ## MCP 服务配置
 
@@ -9,8 +9,7 @@
   "mcpServers": {
     "simple-time": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/tanggling/simple-time-mcp.git", "simple-time-mcp"]
+      "args": ["simple-time-mcp@latest"]
     }
   }
 }
-```
