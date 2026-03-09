@@ -1,36 +1,54 @@
-# main.py
 import json
 import sys
 import time
-from typing import Dict, Any
 
-def list_tools() -> list:
-    return [
-        {
-            "name": "get_current_time",
-            "description": "获取当前服务器时间（UTC）",
-            "input_schema": {"type": "object", "properties": {}, "required": []}
-        }
-    ]
+def list_tools():
+    return [{
+        "name": "get_current_time",
+        "description": "获取当前服务器时间（UTC）",
+        "input_schema": {"type": "object", "properties": {}, "required": []}
+    }]
 
-def call_tool(name: str, arguments: Dict[str, Any]) -> Dict:
+def call_tool(name, arguments):
     if name == "get_current_time":
         return {"result": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())}
     return {"error": "Unknown tool"}
 
-def main():
-    for line in sys.stdin:
-        try:
-            req = json.loads(line.strip())
-            if req.get("type") == "list_tools":
-                print(json.dumps({"tools": list_tools()}))
-            elif req.get("type") == "call_tool":
-                result = call_tool(req["name"], req.get("arguments", {}))
-                print(json.dumps({"result": result}))
-            sys.stdout.flush()
-        except Exception as e:
-            print(json.dumps({"error": str(e)}))
-            sys.stdout.flush()
-
 if __name__ == "__main__":
-    main()   # 保持兼容直接 python main.py
+    # 强制 utf-8 输出，避免编码问题
+    sys.stdout.reconfigure(encoding='utf-8')
+    
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            req = json.loads(line)
+            resp = {
+                "jsonrpc": "2.0",
+                "id": req.get("id", 0)
+            }
+            
+            method = req.get("method")
+            if method == "tools/list":
+                resp["result"] = {"tools": list_tools()}
+            elif method == "tools/call":
+                params = req.get("params", {})
+                name = params.get("name")
+                args = params.get("arguments", {})
+                resp["result"] = call_tool(name, args)
+            else:
+                resp["error"] = {"code": -32601, "message": "Method not found"}
+            
+            # 压缩输出：无空格、无换行、无转义
+            print(json.dumps(resp, ensure_ascii=False, separators=(',', ':')))
+            sys.stdout.flush()
+        
+        except Exception:
+            # 异常时只输出最小 error，不打印 traceback
+            print(json.dumps({
+                "jsonrpc": "2.0",
+                "id": 0,
+                "error": {"code": -32000, "message": "Internal error"}
+            }, separators=(',', ':')))
+            sys.stdout.flush()
